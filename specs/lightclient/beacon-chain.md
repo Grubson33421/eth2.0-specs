@@ -105,11 +105,13 @@ def get_sync_committee_indices(state: BeaconState, epoch: Epoch) -> Sequence[Val
     """
     Return the sync committee indices for a given state and epoch.
     """
+    MAX_RANDOM_BYTE = 2**8 - 1
     base_epoch = Epoch((max(epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD, 1) - 1) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD)
     active_validator_indices = get_active_validator_indices(state, base_epoch)
     active_validator_count = uint64(len(active_validator_indices))
     seed = get_seed(state, base_epoch, DOMAIN_SYNC_COMMITTEE)
-    i, sync_committee_indices = 0, []
+    i = 0
+    sync_committee_indices: List[ValidatorIndex] = []
     while len(sync_committee_indices) < SYNC_COMMITTEE_SIZE:
         shuffled_index = compute_shuffled_index(uint64(i % active_validator_count), active_validator_count, seed)
         candidate_index = active_validator_indices[shuffled_index]
@@ -151,7 +153,7 @@ def process_block(state: BeaconState, block: BeaconBlock) -> None:
 ```python
 def process_sync_committee(state: BeaconState, body: BeaconBlockBody) -> None:
     # Verify sync committee aggregate signature signing over the previous slot block root
-    previous_slot = max(state.slot, Slot(1)) - Slot(1)
+    previous_slot = max(Slot(state.slot), Slot(1)) - Slot(1)
     committee_indices = get_sync_committee_indices(state, get_current_epoch(state))
     participant_indices = [committee_indices[i] for i in range(len(committee_indices)) if body.sync_committee_bits[i]]
     participant_pubkeys = [state.validators[participant_index].pubkey for participant_index in participant_indices]
